@@ -22,13 +22,7 @@ class PrecisionMath
     public const int INTERNAL_PRECISION = 100;
 
     public const int ROUND_HALF_UP = 1;
-
-    //    public const int ROUND_CEILING = 5;
     public const int ROUND_FLOOR = 6;
-
-    // TODO: Add both of these rounding strategies
-    public const int ROUND_TOWARDS_ZERO = 7;
-    public const int ROUND_AWAY_FROM_ZERO = 8;
 
     public function __construct(
         protected readonly ?int $forceMinFormatScale = 0,
@@ -44,9 +38,7 @@ class PrecisionMath
      */
     public function add(string $leftOperand, string $rightOperand, ?int $scale = self::INTERNAL_PRECISION): string
     {
-        return $this->applyConfiguredFormat(
-            bcadd($leftOperand, $rightOperand, $scale)
-        );
+        return bcadd($leftOperand, $rightOperand, $scale);
     }
 
     /**
@@ -56,9 +48,7 @@ class PrecisionMath
      */
     public function sub(string $leftOperand, string $rightOperand, ?int $scale = self::INTERNAL_PRECISION): string
     {
-        return $this->applyConfiguredFormat(
-            bcsub($leftOperand, $rightOperand, $scale)
-        );
+        return bcsub($leftOperand, $rightOperand, $scale);
     }
 
     /**
@@ -68,9 +58,7 @@ class PrecisionMath
      */
     public function mul(string $leftOperand, string $rightOperand, ?int $scale = self::INTERNAL_PRECISION): string
     {
-        return $this->applyConfiguredFormat(
-            bcmul($leftOperand, $rightOperand, $scale)
-        );
+        return bcmul($leftOperand, $rightOperand, $scale);
     }
 
     /**
@@ -80,9 +68,7 @@ class PrecisionMath
      */
     public function div(string $leftOperand, string $rightOperand, ?int $scale = self::INTERNAL_PRECISION): string
     {
-        return $this->applyConfiguredFormat(
-            bcdiv($leftOperand, $rightOperand, $scale)
-        );
+        return bcdiv($leftOperand, $rightOperand, $scale);
     }
 
     /**
@@ -92,9 +78,7 @@ class PrecisionMath
      */
     public function mod(string $leftOperand, string $rightOperand, ?int $scale = self::INTERNAL_PRECISION): string
     {
-        return $this->applyConfiguredFormat(
-            bcmod($leftOperand, $rightOperand, $scale)
-        );
+        return bcmod($leftOperand, $rightOperand, $scale);
     }
 
     /**
@@ -104,12 +88,8 @@ class PrecisionMath
      */
     public function pow(string $base, string $exponent, ?int $scale = self::INTERNAL_PRECISION): string
     {
-        return $this->applyConfiguredFormat(
-            bcpow($base, $exponent, $scale)
-        );
+        return bcpow($base, $exponent, $scale);
     }
-
-    // Comparison
 
     /**
      * Decorates bccomp(), increasing the scale default to INTERNAL_PRECISION
@@ -180,7 +160,7 @@ class PrecisionMath
     /**
      * Rounds the number to $scale decimals, using the HALF_UP rounding strategy by default
      */
-    public function round(string $number, int $scale, int $roundingStrategy = PHP_ROUND_HALF_UP): string
+    public function round(string $number, int $scale, int $roundingStrategy = self::ROUND_HALF_UP): string
     {
         return match ($roundingStrategy) {
             static::ROUND_HALF_UP => $this->roundHalfUp($number, $scale),
@@ -189,6 +169,13 @@ class PrecisionMath
         };
     }
 
+    /**
+     * Round number to the specified decimal accuracy.
+     *
+     * Rounds the number away from zero when it is halfway there, making 1.15 into 1.2 and -1.15 into -1.2.
+     *
+     * @return string number
+     */
     public function roundHalfUp(string $number, int $scale): string
     {
         $exponent = bcpow('10', (string) ($scale + 1), 0);
@@ -196,16 +183,19 @@ class PrecisionMath
         $value = bcmul($number, $exponent,0);
 
         if (static::isNegative($number)) {
-            return $this->applyConfiguredFormat(
-                bcdiv(bcadd($value, '-5', 0), $exponent, $scale)
-            );
+            return bcdiv(bcadd($value, '-5', 0), $exponent, $scale);
         }
 
-        return $this->applyConfiguredFormat(
-            bcdiv(bcadd($value, '5', 0), $exponent, $scale)
-        );
+        return bcdiv(bcadd($value, '5', 0), $exponent, $scale);
     }
 
+    /**
+     * Round number to the specified decimal accuracy.
+     *
+     * TODO: Add description of strategy
+     *
+     * @return string number
+     */
     public function roundFloor(string $number, int $scale): string
     {
         if (! $this->hasDecimal($number)) {
@@ -217,30 +207,11 @@ class PrecisionMath
         $value = bcmul($number, $exponent,0);
 
         if (static::isNegative($number)) {
-            return $this->applyConfiguredFormat(
-                bcdiv(bcadd($value, '-10', static::INTERNAL_PRECISION), $exponent, $scale)
-            );
+            return bcdiv(bcadd($value, '-10', static::INTERNAL_PRECISION), $exponent, $scale);
         }
 
-        return $this->applyConfiguredFormat(
-            bcdiv($value, $exponent, $scale)
-        );
+        return bcdiv($value, $exponent, $scale);
     }
-
-//    public function roundCeiling(string $number, ?int $scale = self::INTERNAL_PRECISION): string
-//    {
-//
-//    }
-//
-//    public function roundAwayFromZero(string $number, ?int $scale = self::INTERNAL_PRECISION): string
-//    {
-//
-//    }
-//
-//    public function roundTowardsZero(string $number, ?int $scale = self::INTERNAL_PRECISION): string
-//    {
-//
-//    }
 
     /**
      * @return string the first whole number less than or equal to the number
@@ -360,34 +331,5 @@ class PrecisionMath
         }
 
         return $this->floatingDecimalPrecision($accumulation);
-    }
-
-    protected function applyConfiguredFormat(string $number): string
-    {
-        if ($this->useFloatingPrecisionDecimals === true) {
-            $number = $this->floatingDecimalPrecision($number);
-        }
-
-        if ($this->forceMinFormatScale > 0) {
-            $this->applyMinScale($number, $this->forceMinFormatScale);
-        }
-
-        return $number;
-    }
-
-    // TODO: Remove
-    public function applyMinScale(?string $number, int $scale): string
-    {
-        if (! static::hasDecimal($number)) {
-            return $number . '.' . str_repeat('0', $this->forceMinFormatScale);
-        }
-
-        $decimalLength = strcspn(strrev($number), '.');
-
-        if ($decimalLength < $this->forceMinFormatScale) {
-            $number .= str_repeat('0', ($this->forceMinFormatScale - $decimalLength));
-        }
-
-        return $number;
     }
 }
