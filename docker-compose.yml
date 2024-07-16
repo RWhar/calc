@@ -1,0 +1,25 @@
+services:
+  composer:
+    build:
+      context: system
+      dockerfile: composer.Dockerfile
+    working_dir: /opt/app
+    entrypoint: ["composer"]
+    command: ["install"]
+    volumes:
+      - ./:/opt/app/
+
+  php:
+    build:
+      dockerfile: system/php.Dockerfile
+    environment:
+      # - XDEBUG_CONFIG="client_host=host.docker.internal"
+      - XDEBUG_SESSION=1
+    volumes:
+      - ./:/opt/app/
+    working_dir: /opt/app
+    command: ["php"]
+
+networks:
+  default:
+    enable_ipv6: false
